@@ -166,6 +166,22 @@ get_order_month = lambda df: pd.to_datetime(df['Order Date'], format="%m/%d/%y %
 get_sales = lambda df: df['Quantity Ordered'] * df['Price Each']
 
 
+# ### Add City column
+
+# In[16]:
+
+
+get_cities = lambda df: df['Purchase Address'].str.extract(r'((?<=,\s).*?(?=,))')
+
+
+# ### Add State column
+
+# In[17]:
+
+
+get_states = lambda df: df['Purchase Address'].str.extract(r'((?<=,\s)[A-z]{2}(?=\s\d))')
+
+
 # ### Create final data variable and call all augmenting functions
 # 
 # We will be using `clean_data` and not the original data `all_data` due to the following reason:
@@ -175,12 +191,13 @@ get_sales = lambda df: df['Quantity Ordered'] * df['Price Each']
 # 3. There are some incorrect data types for some columns
 #  - The `Quantity Ordered` and `Price Each` columns need to be numeric in order for the `get_sales` function to work
 
-# In[16]:
+# In[18]:
 
 
 final_data = clean_data.assign(
     Month = get_order_month(clean_data),
-    Sales = get_sales(clean_data)
+    Sales = get_sales(clean_data),
+    City = get_cities(clean_data) + ' (' + get_states(clean_data) + ')',
     ) 
 final_data
 
@@ -195,27 +212,52 @@ final_data
 
 # ### What was the best month for sales? How much was earned that month?
 
-# In[17]:
+# In[19]:
 
 
-get_results = lambda df: (
+# Generic function
+get_sales_results = lambda df, groupby_col: (
     (df
-     .groupby('Month')
+     .groupby(groupby_col)
      .sum()
     )
 )
 
-get_results(final_data).sort_values('Sales')
+sales_month_results = get_sales_results(final_data, 'Month')
+sales_month_results.sort_values('Sales')
 
 
-# In[18]:
+# In[20]:
 
 
 import matplotlib.pyplot as plt
 
-months = sorted(final_data.Month.unique())
+# Generic function
+get_x_data = lambda df, col: [x for x, y in df.groupby(col)]
 
-plt.bar(months, get_results(final_data)['Sales'])
+months = get_x_data(final_data, 'Month')
+
+plt.bar(months, sales_month_results['Sales'])
 plt.ylabel('Sales in USD ($)')
 plt.xlabel('Month')
+
+
+# ### What city sold the most product?
+
+# In[21]:
+
+
+sales_city_results = get_sales_results(final_data, 'City')
+sales_city_results.sort_values('Sales')
+
+
+# In[22]:
+
+
+cities = get_x_data(final_data, 'City')
+
+plt.bar(cities, sales_city_results['Sales'])
+plt.xticks(rotation = 'vertical', size = 8)
+plt.ylabel('Sales in USD ($)')
+plt.xlabel('City')
 
