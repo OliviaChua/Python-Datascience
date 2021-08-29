@@ -155,3 +155,11 @@ get_order_month = lambda df: pd.to_datetime(df['Order Date'], format="%m/%d/%y %
 clean_data.assign(
     Month = get_order_month(clean_data)) 
 
+
+# ## Questions to answer
+# 
+# 1. What was the best month for sales? How much was earned that month?
+# 1. What city sold the most product?
+# 1. What time should we display advertisemens to maximize the likelihood of customer’s buying product?
+# 1. What products are most often sold together?
+# 1. What product sold the most? Why do you think it sold the most?
