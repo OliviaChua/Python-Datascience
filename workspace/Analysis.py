@@ -12,7 +12,7 @@ import os
 
 # ## Merge 12 months of sales data into a single CSV file
 
-# In[15]:
+# In[2]:
 
 
 path = "./SalesAnalysis/Sales_Data/"
@@ -29,7 +29,7 @@ concat_csvs(files).to_csv("all_data.csv", index = False)
 
 # ### Read in updated dataframe
 
-# In[16]:
+# In[3]:
 
 
 all_data = pd.read_csv("all_data.csv")
@@ -38,7 +38,7 @@ all_data
 
 # ### Print a concise summary of our dataframe
 
-# In[17]:
+# In[4]:
 
 
 all_data.info()
@@ -46,7 +46,7 @@ all_data.info()
 
 # ### Check the first few records
 
-# In[18]:
+# In[5]:
 
 
 all_data.head()
@@ -54,7 +54,7 @@ all_data.head()
 
 # ### Check the last few records
 
-# In[19]:
+# In[6]:
 
 
 all_data.tail()
@@ -120,7 +120,13 @@ drop_header_rows(all_data)
 
 
 def get_clean_data(df):
-    return df.pipe(drop_na).pipe(drop_header_rows)
+    return (df
+            .pipe(drop_na)
+            .pipe(drop_header_rows)
+            # Convert Quantity Ordered and Price Each to numeric
+            .assign(**{'Quantity Ordered': lambda df_: pd.to_numeric(df_['Quantity Ordered'])},
+                    **{'Price Each': lambda df_: pd.to_numeric(df_['Price Each'])})
+           )
  
 clean_data = get_clean_data(all_data)
 clean_data
@@ -151,15 +157,65 @@ clean_data.to_csv("clean_data.csv", index = False)
 
 get_order_month = lambda df: pd.to_datetime(df['Order Date'], format="%m/%d/%y %H:%M").dt.strftime('%m')
 
-# Sidenote: Need to use the clean data since there are duplicate header rows which is causing error in date conversion 
-clean_data.assign(
-    Month = get_order_month(clean_data)) 
+
+# ### Add Sales column
+
+# In[15]:
+
+
+get_sales = lambda df: df['Quantity Ordered'] * df['Price Each']
+
+
+# ### Create final data variable and call all augmenting functions
+# 
+# We will be using `clean_data` and not the original data `all_data` due to the following reason:
+# 
+# 1. There are NaNs in the original data which can affect the result of the analysis
+# 2. There are duplicate header rows which is causing error in the date conversion `to_datetime` which is part of the `get_order_month` function
+# 3. There are some incorrect data types for some columns
+#  - The `Quantity Ordered` and `Price Each` columns need to be numeric in order for the `get_sales` function to work
+
+# In[16]:
+
+
+final_data = clean_data.assign(
+    Month = get_order_month(clean_data),
+    Sales = get_sales(clean_data)
+    ) 
+final_data
 
 
 # ## Questions to answer
 # 
 # 1. What was the best month for sales? How much was earned that month?
-# 1. What city sold the most product?
-# 1. What time should we display advertisemens to maximize the likelihood of customer’s buying product?
-# 1. What products are most often sold together?
-# 1. What product sold the most? Why do you think it sold the most?
+# 2. What city sold the most product?
+# 3. What time should we display advertisemens to maximize the likelihood of customer’s buying product?
+# 4. What products are most often sold together?
+# 5. What product sold the most? Why do you think it sold the most?
+
+# ### What was the best month for sales? How much was earned that month?
+
+# In[17]:
+
+
+get_results = lambda df: (
+    (df
+     .groupby('Month')
+     .sum()
+    )
+)
+
+get_results(final_data).sort_values('Sales')
+
+
+# In[18]:
+
+
+import matplotlib.pyplot as plt
+
+months = sorted(final_data.Month.unique())
+
+plt.bar(months, get_results(final_data)['Sales'])
+plt.ylabel('Sales in USD ($)')
+plt.xlabel('Month')
+
