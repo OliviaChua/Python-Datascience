@@ -123,8 +123,11 @@ def get_clean_data(df):
     return (df
             .pipe(drop_na)
             .pipe(drop_header_rows)
-            # Convert Quantity Ordered and Price Each to numeric
-            .assign(**{'Quantity Ordered': lambda df_: pd.to_numeric(df_['Quantity Ordered'])},
+            .assign(
+                    # Convert Order Date from str to date format
+                    **{'Order Date': lambda df_: pd.to_datetime(df_['Order Date'], format="%m/%d/%y %H:%M")},
+                    # Convert Quantity Ordered and Price Each to numeric
+                    **{'Quantity Ordered': lambda df_: pd.to_numeric(df_['Quantity Ordered'])},
                     **{'Price Each': lambda df_: pd.to_numeric(df_['Price Each'])})
            )
  
@@ -147,20 +150,36 @@ clean_data.to_csv("clean_data.csv", index = False)
 # In[13]:
 
 
-# Tutorial method
-# all_data['Month'] = all_data['Order Date'].str[0:2]
-# all_data['Month'] = all_data['Month'].astype('int32') # Need to use clean data since there are NaN values
+get_order_month = lambda df: df['Order Date'].dt.month
 
+
+# ### Add Date column
 
 # In[14]:
 
 
-get_order_month = lambda df: pd.to_datetime(df['Order Date'], format="%m/%d/%y %H:%M").dt.strftime('%m')
+get_order_date = lambda df: df['Order Date'].dt.date
+
+
+# ### Add Hour column
+
+# In[15]:
+
+
+get_order_hour = lambda df: df['Order Date'].dt.hour
+
+
+# ### Add Minute column
+
+# In[16]:
+
+
+get_order_minute = lambda df: df['Order Date'].dt.minute
 
 
 # ### Add Sales column
 
-# In[15]:
+# In[17]:
 
 
 get_sales = lambda df: df['Quantity Ordered'] * df['Price Each']
@@ -168,7 +187,7 @@ get_sales = lambda df: df['Quantity Ordered'] * df['Price Each']
 
 # ### Add City column
 
-# In[16]:
+# In[18]:
 
 
 get_cities = lambda df: df['Purchase Address'].str.extract(r'((?<=,\s).*?(?=,))')
@@ -176,7 +195,7 @@ get_cities = lambda df: df['Purchase Address'].str.extract(r'((?<=,\s).*?(?=,))'
 
 # ### Add State column
 
-# In[17]:
+# In[19]:
 
 
 get_states = lambda df: df['Purchase Address'].str.extract(r'((?<=,\s)[A-z]{2}(?=\s\d))')
@@ -189,13 +208,17 @@ get_states = lambda df: df['Purchase Address'].str.extract(r'((?<=,\s)[A-z]{2}(?
 # 1. There are NaNs in the original data which can affect the result of the analysis
 # 2. There are duplicate header rows which is causing error in the date conversion `to_datetime` which is part of the `get_order_month` function
 # 3. There are some incorrect data types for some columns
+#  - The `Order Date` needs to be in date format so it is easier to get the month, day, year, or time from this column
 #  - The `Quantity Ordered` and `Price Each` columns need to be numeric in order for the `get_sales` function to work
 
-# In[18]:
+# In[20]:
 
 
 final_data = clean_data.assign(
     Month = get_order_month(clean_data),
+    Date = get_order_date(clean_data),
+    Hour = get_order_hour(clean_data),
+    Minute = get_order_minute(clean_data),
     Sales = get_sales(clean_data),
     City = get_cities(clean_data) + ' (' + get_states(clean_data) + ')',
     ) 
@@ -205,14 +228,15 @@ final_data
 # ## Questions to answer
 # 
 # 1. What was the best month for sales? How much was earned that month?
-# 2. What city sold the most product?
-# 3. What time should we display advertisemens to maximize the likelihood of customer’s buying product?
-# 4. What products are most often sold together?
-# 5. What product sold the most? Why do you think it sold the most?
+# 2. What specific date earned the most sales?
+# 3. What city sold the most product?
+# 4. What time should we display advertisemens to maximize the likelihood of customer’s buying product?
+# 5. What products are most often sold together?
+# 6. What product sold the most? Why do you think it sold the most?
 
 # ### What was the best month for sales? How much was earned that month?
 
-# In[19]:
+# In[21]:
 
 
 # Generic function
@@ -227,7 +251,7 @@ sales_month_results = get_sales_results(final_data, 'Month')
 sales_month_results.sort_values('Sales')
 
 
-# In[20]:
+# In[22]:
 
 
 import matplotlib.pyplot as plt
@@ -242,16 +266,31 @@ plt.ylabel('Sales in USD ($)')
 plt.xlabel('Month')
 
 
+# ### What specific date earned the most sales?
+
+# In[23]:
+
+
+get_sales_results(final_data, 'Date').sort_values('Sales')
+
+
+# In[24]:
+
+
+import datetime
+final_data[final_data['Date'] == datetime.date(2019,12,4)]['Sales'].sum()
+
+
 # ### What city sold the most product?
 
-# In[21]:
+# In[25]:
 
 
 sales_city_results = get_sales_results(final_data, 'City')
 sales_city_results.sort_values('Sales')
 
 
-# In[22]:
+# In[26]:
 
 
 cities = get_x_data(final_data, 'City')
@@ -260,4 +299,26 @@ plt.bar(cities, sales_city_results['Sales'])
 plt.xticks(rotation = 'vertical', size = 8)
 plt.ylabel('Sales in USD ($)')
 plt.xlabel('City')
+
+
+# ### What time should we display advertisemens to maximize the likelihood of customer’s buying product?
+# 
+# Based on the chart below, we have peaks at 11 am, 12pm and 7 pm. 
+# 
+# Good times to display ads:
+# 
+# - 10 am to 12 pm
+# - 6 pm to 7 pm
+
+# In[27]:
+
+
+hours = get_x_data(final_data, 'Hour')
+
+# Count the number of rows by the hour
+plt.plot(hours, final_data.groupby('Hour').count())
+plt.xticks(hours)
+plt.grid()
+plt.ylabel('Number of Orders')
+plt.xlabel('Hours')
 
