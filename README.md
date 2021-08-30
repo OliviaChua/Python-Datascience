@@ -2,15 +2,42 @@
 
 This is a set of real world data science tasks completed using the Python Pandas library.
 
+# Project Organization
+
+    workspace/
+    │
+    ├── data/               <- The original, immutable data dump.
+    │
+    ├── figures/            <- Figures saved by scripts or notebooks.
+    │
+    ├── notebooks/          <- Jupyter notebooks. 
+    │
+    ├── output/             <- Manipulated data, logs, etc.
+    │
+    ├── tests/              <- Unit tests.
+    │
+    ├── practice/           <- Python module with source code of this project.
+    
+    ./
+    │
+    ├── Makefile            <- Makefile with shortcut commands to run project
+    │
+    └── README.md           <- The top-level README for developers using this project.
+
 # Setup
 
 To run this project, just do `make run` then open the generated URL of the Jupyter Notebook.
 
-Once you are in the dedicated URL, just click `work > Analysis.ipynb`
+Once you are in the dedicated URL, just click `work > notebooks > Analysis.ipynb`
 
 # Reference
 
-All of the data files are from this [repository](https://github.com/KeithGalli/Pandas-Data-Science-Tasks). This repo goes with [this video](https://youtu.be/eMOA1pPVUc4) on "Solving real world data science videos with Python Pandas!". 
+- The idea of the project structure is from this [tutorial](https://godatadriven.com/blog/write-less-terrible-code-with-jupyter-notebook/).
+
+
+- All of the data files are from this [repository](https://github.com/KeithGalli/Pandas-Data-Science-Tasks). This repo goes with [this video](https://youtu.be/eMOA1pPVUc4) on "Solving real world data science videos with Python Pandas!". 
+
+-----
 
 Here is some information on that video.
 
