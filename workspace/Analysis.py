@@ -240,14 +240,14 @@ final_data
 
 
 # Generic function
-get_sales_results = lambda df, groupby_col: (
+get_grouped_sum = lambda df, groupby_col: (
     (df
      .groupby(groupby_col)
      .sum()
     )
 )
 
-sales_month_results = get_sales_results(final_data, 'Month')
+sales_month_results = get_grouped_sum(final_data, 'Month')
 sales_month_results.sort_values('Sales')
 
 
@@ -271,7 +271,7 @@ plt.xlabel('Month')
 # In[23]:
 
 
-get_sales_results(final_data, 'Date').sort_values('Sales')
+get_grouped_sum(final_data, 'Date').sort_values('Sales')
 
 
 # In[24]:
@@ -286,7 +286,7 @@ final_data[final_data['Date'] == datetime.date(2019,12,4)]['Sales'].sum()
 # In[25]:
 
 
-sales_city_results = get_sales_results(final_data, 'City')
+sales_city_results = get_grouped_sum(final_data, 'City')
 sales_city_results.sort_values('Sales')
 
 
@@ -321,4 +321,90 @@ plt.xticks(hours)
 plt.grid()
 plt.ylabel('Number of Orders')
 plt.xlabel('Hours')
+
+
+# ### What products are most often sold together?
+
+# In[28]:
+
+
+get_duplicate_records = lambda df, col: df[df.duplicated(subset = [col],keep = False)]
+
+add_grouped_prod_col = lambda df, groupby_col: df.assign(Grouped = df.groupby(groupby_col)['Product'].transform(lambda x: ','.join(x)))
+
+
+get_grouped_prod = lambda: (
+    final_data
+    .pipe(get_duplicate_records, col = 'Order ID')
+    .pipe(add_grouped_prod_col, groupby_col = 'Order ID')
+    .loc[:, ['Order ID', 'Grouped']]
+    .drop_duplicates()
+    .assign(Group = lambda df_: df_['Grouped'].str.split(",").str.len())
+)
+
+get_grouped_prod()
+
+
+# In[29]:
+
+
+from itertools import combinations
+from collections import Counter
+
+count = Counter()
+
+for row in get_grouped_prod()['Grouped']:
+    row_list = row.split(",")
+    count.update(Counter(combinations(row_list, 2)))
+    
+for key, val in count.most_common(10):
+    print(key, val)
+
+
+# The method below only gives an estimate count
+
+# In[30]:
+
+
+get_grouped_prod().value_counts(subset=['Grouped','Group'], sort = True)
+
+
+# ### What product sold the most? Why do you think it sold the most?
+
+# In[31]:
+
+
+quantity_product_results = get_grouped_sum(final_data, 'Product')
+quantity_product_results.sort_values('Quantity Ordered')
+
+
+# In[32]:
+
+
+products = get_x_data(final_data, 'Product')
+quantity_ordered = quantity_product_results['Quantity Ordered']
+
+plt.bar(products, quantity_ordered)
+plt.xticks(rotation = 'vertical', size = 8)
+plt.ylabel('Quantity Ordered')
+plt.xlabel('Product')
+
+
+# In[33]:
+
+
+prices = final_data.groupby('Product').mean()['Price Each']
+
+fig, ax1 = plt.subplots()
+
+ax2 = ax1.twinx()
+ax1.bar(products, quantity_ordered, color='g')
+ax2.plot(products, prices, color='b')
+
+ax1.set_xlabel('Product Name')
+ax1.set_ylabel('Quantity Ordered', color='g')
+ax1.set_xticklabels(products, rotation='vertical', size=8)
+ax2.set_ylabel('Price ($)', color='b')
+
+fig.show()
 
